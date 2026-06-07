@@ -1,0 +1,22 @@
+
+
+spring:
+  application:
+    name: consumer
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+dubbo:
+  application:
+    name: consumer
+  registry:
+    address: nacos://127.0.0.1:8848
+
+rocketmq:
+  name-server: 192.168.227.145:9876
+  producer:
+    group: test-producer-group
+
+server:
+  port: 8061

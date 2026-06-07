@@ -1,0 +1,31 @@
+
+
+spring:
+  application:
+    name: provider
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/cd_user?useSSL=false&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
+    username: root
+    password: 123456
+
+dubbo:
+  application:
+    name: provider
+  protocol:
+    name: dubbo
+    port: -1
+  registry:
+    address: nacos://127.0.0.1:8848
+  scan:
+    base-packages: com.provider.service
+
+rocketmq:
+  name-server: 192.168.227.145:9876
+
+server:
+  port: 8060

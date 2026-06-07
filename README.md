@@ -1,8 +1,8 @@
 
-# RocketMQ 死信队列完整示例
+# RocketMQ 延迟、死信队列
 
 ## 概述
-本示例演示了消息重试和死信队列机制。
+本示例演示了rocket mq延迟队列和死信队列机制。
 
 ## 核心概念
 
@@ -56,16 +56,16 @@ GET /test/retry/normal?message=测试消息
 ```
 - 描述：应该立即消费成功
 
-### 5. 综合测试
+### 5. 延迟队列
 ```
-GET /test/retry/all
+GET /test/delayed?message=测试消息&delaySeconds=3
 ```
-- 描述：一次性发送所有类型的测试消息
+- 描述：三秒后消息发送，控制台打印：收到延迟消息:xxx
 
 ## 观察日志
 
 ### 重试过程
-观察控制台或 `logs/retry-consumer.log`：
+观察控制台：
 ```
 ========== 收到消息 ==========
 消息ID: xxx, 重试次数: 0, 消息内容: FAILURE_xxx, 接收时间: ...

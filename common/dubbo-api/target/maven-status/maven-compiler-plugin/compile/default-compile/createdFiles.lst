@@ -1,4 +1,2 @@
 com\dubboapi\apis\Provider1.class
-com\dubboapi\rocketmq\RocketMqTopic.class
 com\dubboapi\apis\UserProvider.class
-com\dubboapi\rocketmq\OrderMessage.class

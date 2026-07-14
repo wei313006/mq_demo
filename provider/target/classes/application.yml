@@ -25,7 +25,9 @@ dubbo:
     base-packages: com.provider.service
 
 rocketmq:
-  name-server: 192.168.227.145:9876
+  name-server: 192.168.227.200:9876
+  producer:
+    group: test-producer-group
 
 server:
   port: 8060

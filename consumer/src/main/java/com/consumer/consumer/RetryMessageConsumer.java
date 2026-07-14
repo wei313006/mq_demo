@@ -1,22 +1,17 @@
+package com.consumer.consumer;
 
-package com.provider.consumer;
-
+import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.spring.annotation.ConsumeMode;
 import org.apache.rocketmq.spring.annotation.MessageModel;
 import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
 import org.apache.rocketmq.spring.core.RocketMQListener;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
-/**
- * 带有重试机制的消息消费者
- * 模拟各种消费失败场景
- */
+@Slf4j
 @Component
 @RocketMQMessageListener(
         topic = "test-retry-topic",
@@ -26,29 +21,25 @@ import java.util.Date;
 )
 public class RetryMessageConsumer implements RocketMQListener<MessageExt> {
 
-    private static final Logger logger = LoggerFactory.getLogger(RetryMessageConsumer.class);
-
-    // 模拟失败的开关，通过消息内容控制
     private static final String FAILURE_PREFIX = "FAILURE_";
     private static final String RANDOM_FAILURE_PREFIX = "RANDOM_FAILURE_";
     private static final String SUCCESS_AFTER_RETRY_PREFIX = "SUCCESS_AFTER_RETRY_";
 
-    // 记录重试次数（这里简化处理，实际生产中应该用数据库或Redis存储）
-    private static int retryCounter = 0;
+    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+    private static final double FAILURE_RATE_THRESHOLD = 0.7;
+    private static final int DEFAULT_EXPECTED_RETRIES = 2;
 
     @Override
     public void onMessage(MessageExt messageExt) {
         String messageBody = new String(messageExt.getBody());
         String msgId = messageExt.getMsgId();
         int reconsumeTimes = messageExt.getReconsumeTimes();
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
-        
-        logger.info("========== 收到消息 ==========");
-        logger.info("消息ID: {}, 重试次数: {}, 消息内容: {}, 接收时间: {}", 
-                msgId, reconsumeTimes, messageBody, sdf.format(new Date()));
+
+        log.info("========== 收到消息 ==========");
+        log.info("消息ID: {}, 重试次数: {}, 消息内容: {}, 接收时间: {}",
+                msgId, reconsumeTimes, messageBody, LocalDateTime.now().format(FORMATTER));
 
         try {
-            // 根据消息内容模拟不同的消费场景
             if (messageBody.startsWith(FAILURE_PREFIX)) {
                 handleAlwaysFailure(messageBody, reconsumeTimes);
             } else if (messageBody.startsWith(RANDOM_FAILURE_PREFIX)) {
@@ -58,66 +49,49 @@ public class RetryMessageConsumer implements RocketMQListener<MessageExt> {
             } else {
                 handleNormalMessage(messageBody);
             }
-            
-            logger.info("消息消费成功: {}", msgId);
+
+            log.info("消息消费成功: {}", msgId);
         } catch (Exception e) {
-            logger.error("消息消费失败，触发重试机制", e);
+            log.error("消息消费失败，触发重试机制, msgId: {}", msgId, e);
             throw new RuntimeException("消费失败，触发重试", e);
         }
     }
 
-    /**
-     * 场景1：总是失败的消息
-     * 这种消息会不断重试，直到达到最大重试次数后进入死信队列
-     */
     private void handleAlwaysFailure(String message, int reconsumeTimes) {
-        logger.warn("【总是失败场景】当前重试次数: {}, 消息: {}", reconsumeTimes, message);
+        log.warn("【总是失败场景】当前重试次数: {}, 消息: {}", reconsumeTimes, message);
         throw new RuntimeException("模拟总是失败的业务异常");
     }
 
-    /**
-     * 场景2：随机失败的消息
-     * 模拟网络波动等随机故障场景
-     */
     private void handleRandomFailure(String message, int reconsumeTimes) {
         double random = Math.random();
-        logger.warn("【随机失败场景】随机值: {}, 当前重试次数: {}, 消息: {}", 
+        log.warn("【随机失败场景】随机值: {}, 当前重试次数: {}, 消息: {}",
                 random, reconsumeTimes, message);
-        
-        if (random > 0.7) { // 70%概率失败
+
+        if (random > FAILURE_RATE_THRESHOLD) {
             throw new RuntimeException("模拟随机失败: " + random);
         }
     }
 
-    /**
-     * 场景3：重试几次后成功的消息
-     * 模拟临时故障恢复的场景
-     */
     private void handleSuccessAfterRetry(String message, int reconsumeTimes) {
-        // 解析期望的重试次数
-        int expectedRetries = 2; // 默认重试2次后成功
+        int expectedRetries = DEFAULT_EXPECTED_RETRIES;
         try {
             String[] parts = message.split("_");
             if (parts.length >= 4) {
                 expectedRetries = Integer.parseInt(parts[3]);
             }
-        } catch (Exception e) {
-            // 使用默认值
+        } catch (NumberFormatException e) {
+            log.warn("解析重试次数失败，使用默认值: {}", DEFAULT_EXPECTED_RETRIES, e);
         }
-        
-        logger.warn("【重试后成功场景】期望重试次数: {}, 当前重试次数: {}, 消息: {}", 
+
+        log.warn("【重试后成功场景】期望重试次数: {}, 当前重试次数: {}, 消息: {}",
                 expectedRetries, reconsumeTimes, message);
-        
+
         if (reconsumeTimes < expectedRetries) {
             throw new RuntimeException("模拟临时故障，还需重试: " + (expectedRetries - reconsumeTimes) + "次");
         }
     }
 
-    /**
-     * 处理正常消息
-     */
     private void handleNormalMessage(String message) {
-        logger.info("【正常消费】处理消息: {}", message);
+        log.info("【正常消费】处理消息: {}", message);
     }
 }
-

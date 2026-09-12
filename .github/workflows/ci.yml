@@ -12,7 +12,7 @@ jobs:
 
       - uses: actions/setup-java@v5
         with:
-          java-version: '8'    # 按你项目实际 JDK 版本改
+          java-version: '17'
           distribution: 'temurin'
           cache: 'maven'
 
